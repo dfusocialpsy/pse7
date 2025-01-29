@@ -1,6 +1,6 @@
 ---
-title: "PSE 7"
-author: "David F. Urschler & Clemens Lidner"
+title: "Do less statistical errors lead to higher replication rates?"
+author: "David F. Urschler & Clemens Lindner"
 format: 
   html:
     embed-resources: true
@@ -11,10 +11,210 @@ execute:
   echo: false
 ---
 
-## PSE 7 test
+```{r packages}
+if(!require(here)){install.packages('here')}
+if(!require(ggthemr)){install.packages('ggthemr')}
+if(!require(plotly)){install.packages('plotly')}
+if(!require(tidyverse)){install.packages('tidyverse')}
+```
+
+```{r data}
+
+ds <- read.csv(here::here("pre_rep_coding_final.csv"),
+               header = TRUE)
+
+ds |> 
+  mutate(
+    id = 1:nrow(ds),
+    
+    perc_err_tot = round(
+      (n_error_tot * 100)/ n_nhst_tot, 2),
+    
+    perc_err_dec = 
+      round(
+        (n_decision_error_tot * 100)/ n_nhst_tot, 2)
+    
+    
+  ) -> ds
 
 
-### more information 
+```
 
 
-## Even more information
+```{r functions for plotting}
+
+ggthemr::ggthemr("fresh", text_size = 20)
+
+fun_plot <- function(data_set, 
+                     x, 
+                     y, 
+                     grp = NULL, 
+                     lbl = NULL,
+                     titl = NULL, 
+                     yl = NULL,
+                     leg = NULL) {
+  data_set |> 
+    filter({{x}} > 1) |> # this assures that we don't get empty bars
+    ggplot(aes(
+      x = {{x}},
+      y = {{y}},
+      fill = {{grp}},
+      label = {{lbl}}
+    )) +
+    
+    geom_col() +
+    
+    geom_text(nudge_x = 5) +
+    
+    labs(title = titl,
+         x = "",
+         y = yl) +
+    
+    theme(plot.title = element_text(size = 20),
+          aspect.ratio = 1/1.618,
+          axis.text.y = element_blank(),
+          legend.title=element_blank(),
+          legend.position = leg) 
+  
+}
+```
+
+
+## What did we aim for?
+
+Although reducing the prevalence of misreported statistical values is of great importance, little is known whether the prevalence of misreported statistical values can predict replicability. An answer to this question is suggested by previous findings showing that the prevalence of misreported p-values was higher for significant than for non-significant p-values. This might indicate a systematic bias for significant results, which, in turn, can reduce replicability due to original results that stem from questionable research practices. Consequently, we aimed to provide an answer to the question whether the prevalence of misreported statistical values can predict replicability.
+
+## How we tried to answer our questions
+
+We analyzed the original articles of three replications projects. With statcheck we assessed the number NHSTs, prevalence of statistical errors (e.g., rounding errors) and, respectively, statistical decisions errors (i.e., reporting a result as significant that is non-significant and vice versa). Whenever possible, we applied GRIM and GRIMMER tests to examine means and SDs’ plausibility. 
+Some articles were not machine-readable, or used different reporting practices, or contained statistical parameters that could not be checked (i.e., prep-values). Hence, we manually extracted the information from the original pdf, which was not fun at all. We used the replication projects’, although somewhat maze-like, OSF repositories for replicability. For exploratory reasons, we coded each article for the exclusion of participants, whether these were traceable, and whether the analyses were adjusted for multiple testing.
+
+## Were we able to provide support for our arguments?
+
+No! We could extract much less information from the original studies than anticipated. Therefore, we could not check whether the prevalence of misreported statistical values can predict replicability. But this is what we found.
+
+### The number of NHSTs 
+
+#### Across all three replication projects
+```{r}
+# Overall
+ds |>  
+  slice_max(n_nhst_tot,
+            n = 15) |> 
+  
+  fun_plot(x = n_nhst_tot,
+           y = reorder(id, n_nhst_tot),
+           lbl = n_nhst_tot,
+           titl = "Total number of NHSTs per article",
+           yl = expression(~italic("n")),
+           leg = "none") 
+```
+
+#### Top five from each replication project
+```{r}
+ds |>  
+  group_by(rep_proj) |> 
+  slice_max(n_nhst_tot,
+            n = 5) |> 
+  
+  fun_plot(x = n_nhst_tot,
+           y = reorder(id, n_nhst_tot),
+           grp = rep_proj,
+           lbl = n_nhst_tot,
+           titl = "Total number of NHSTs per article",
+           yl = expression(~italic("n")))
+
+```
+
+### The percentages of misreported *p*-values per article
+
+#### Across all three replication projects
+```{r}
+ds |>  
+  slice_max(perc_err_tot,
+            n = 15) |> 
+  
+  fun_plot(x = perc_err_tot,
+           y = reorder(id, perc_err_tot),
+           lbl = perc_err_tot,
+           titl = "Errors per article in percent",
+           yl = expression(~bold("%")),
+           leg = "none")
+```
+
+#### Top five from each replication project
+```{r}
+ds |>  
+  
+  group_by(rep_proj) |> 
+  slice_max(perc_err_tot,
+            n = 5) |> 
+  
+  fun_plot(x = perc_err_tot,
+           y = reorder(id, perc_err_tot),
+           grp = rep_proj,
+           lbl = perc_err_tot,
+           titl = "Errors per article in percent",
+           yl = expression(~bold("%")))
+```
+
+
+### The percentages of decision errors per article
+
+#### Across all three replication projects
+```{r}
+ds |> 
+  slice_max(perc_err_dec,
+            n = 15) |> 
+  
+  fun_plot(x = perc_err_dec,
+           y = reorder(id, perc_err_dec),
+           lbl = perc_err_dec,
+           titl = "Decision errors per article in percent",
+           yl = expression(~bold("%")),
+           leg = "none")
+```
+
+#### Top five from each replication project
+```{r}
+ds |>  
+  group_by(rep_proj) |> 
+  slice_max(perc_err_dec,
+            n = 10) |> 
+  
+  fun_plot(x = perc_err_dec,
+           y = reorder(id, perc_err_dec),
+           grp = rep_proj,
+           lbl = perc_err_dec,
+           titl = "Decision errors per article in percent",
+           yl = expression(~bold("%"))) 
+```
+
+## What to do now?
+
+Our findings highlight the importance of a standardized reporting scheme across scientific disciplines and journals. Otherwise, it will remain impossible to scrutinize statistical parameters in the scientific literature. This is especially important, when scientific results have real life consequences, like pre-clinical cancer studies do. We also argue that standardized reporting (i.e., NHSTs) would further increase scientific rigor, and the capabilities to examine them. 
+Furthermore, the majority of the articles lacked the information to assess means and SDs’ plausibility. Therefore, we argue that this information should be easily accessible. In a similar vein, articles that report the exclusion of participants lack the information to retrace the basis of the exclusion. 
+We encourage authors to improve the re-usability of their articles. To be clear, this is not meant to be another burden for authors. Finally, we also encourage publishers to improve the machine-readability of their articles - we live in the third millennium.
+
+
+## References
+
+Anaya J. 2016. The GRIMMER test: A method for testing the validity of reported measures of variability. *PeerJ Preprints 4*:e2400v1
+
+Brown, N. J. L., & Heathers, J. A. J. (2017). The GRIM Test: A Simple Technique Detects Numerous Anomalies in the Reporting of Results in Psychology. *Social Psychological and Personality Science, 8*(4), 363–369.
+
+Camerer, C. F., Dreber, A., Holzmeister, F., Ho, T.-H., Huber, J., Johannesson, M., Kirchler, M., Nave, G., Nosek, B. A., Pfeiffer, T., Altmejd, A., Buttrick, N., Chan, T., Chen, Y., Forsell, E., Gampa, A., Heikensten, E., Hummer, L., Imai, T., … Wu, H. (2018). Evaluating the replicability of social science experiments in Nature and Science between 2010 and 2015. *Nature Human Behaviour, 2*(9), 637–644.
+
+Cole, S. (1983). The Hierarchy of the Sciences? *American Journal of Sociology, 89*(1), 111–139.
+
+Errington, T. M., Mathur, M., Soderberg, C. K., Denis, A., Perfito, N., Iorns, E., & Nosek, B. A. (2021). Investigating the replicability of preclinical cancer biology. *eLife, 10*, e71601. 
+
+Fanelli, D. (2010). “Positive” Results Increase Down the Hierarchy of the Sciences. *PLOS ONE, 5*(4), e10068. 
+
+Nuijten, M. B., Hartgerink, C. H. J., van Assen, M. A. L. M., Epskamp, S., & Wicherts, J. M. (2016). The prevalence of statistical reporting errors in psychology (1985–2013). *Behavior Research Methods, 48*(4), 1205–1226.
+
+Open Science Collaboration. (2015). Estimating the reproducibility of psychological science. *Science, 349*(6251), aac4716-1–aac4716-8. 
+
+
+
+
